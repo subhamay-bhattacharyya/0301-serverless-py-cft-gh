@@ -6,3 +6,4 @@ test-event.json
 *.zip
 lambda-code/src/package/*
 lambda-code/src/serverless-lab-01/*
+*-files.txt

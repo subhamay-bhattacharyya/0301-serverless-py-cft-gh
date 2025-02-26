@@ -12,8 +12,15 @@ on:
       - '**/.github/workflows/build-pipeline.yaml'
 
 jobs:
-  build:
+  scan-repo-services:
+    name: 'Scan Repository for AWS Services'
     runs-on: ubuntu-latest
+    outputs:
+      aws-cloudformation: ${{ steps.repo-services-scan.outputs.aws-cloudformation }}
+      aws-lambda: ${{ steps.repo-services-scan.outputs.aws-lambda }}
+      aws-glue: ${{ steps.repo-services-scan.outputs.aws-glue }}
+      aws-stepfunctions: ${{ steps.repo-services-scan.outputs.aws-stepfunctions }}
+      aws-ecs: ${{ steps.repo-services-scan.outputs.aws-ecs }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,3 +45,17 @@ jobs:
         uses: subhamay-bhattacharyya-gha/repo.service.scanner/.github/actions@main
         with:
           github-repo: ${{ github.repository.name }}
+
+
+  build-lambda-package:
+    name: 'Build Lambda Package'
+    runs-on: ubuntu-latest
+    needs: scan-repo-services
+    # if: ${{ needs.scan-repo-services.outputs.aws-lambda == 'true' }}
+    steps:
+      - name: Build Lambda Package
+        run: |
+          echo "Building Lambda Package"
+          echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
+
+      
