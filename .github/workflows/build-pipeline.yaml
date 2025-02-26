@@ -18,12 +18,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Add safe directory
+      - name: Fetch Base Branch and Get Changed Files
         run: |
+          git fetch origin main --depth=1
+          echo "Added files:"
           git diff --diff-filter=A --name-only origin/main..${{ github.ref_name }}
-          git diff --diff-filter=M --name-only origin/main..${{ github.ref_name }}
-          git diff --diff-filter=D --name-only origin/main..${{ github.ref_name }}
+          echo ""
 
+          echo "Modified files:"
+          git diff --diff-filter=M --name-only origin/main..${{ github.ref_name }}
+          echo ""
+
+          echo "Deleted files:"
+          git diff --diff-filter=D --name-only origin/main..${{ github.ref_name }}
+          echo ""
 
       - name: Scan for AWS Services
         id: repo-services-scan
