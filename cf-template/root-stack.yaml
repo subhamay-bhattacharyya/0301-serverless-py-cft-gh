@@ -232,7 +232,7 @@ Parameters:
 
   ##################################### Lambda ####################################################
   LambdaFunctionBaseName:
-    Default: lambda
+    Default: lambda-function
     Description: "The base name for the Lambda function. The region and environment will be appended as a suffix by the template."
     Type: String
     MinLength: "5"
