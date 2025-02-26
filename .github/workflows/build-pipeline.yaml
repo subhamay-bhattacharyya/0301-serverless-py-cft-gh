@@ -20,9 +20,9 @@ jobs:
 
       - name: Add safe directory
         run: |
-          git diff --diff-filter=A --name-only main..${{ github.ref }}
-          git diff --diff-filter=M --name-only main..${{ github.ref }}
-          git diff --diff-filter=D --name-only main..${{ github.ref }}
+          git diff --diff-filter=A --name-only main..${{ github.ref_name }}
+          git diff --diff-filter=M --name-only main..${{ github.ref_name }}
+          git diff --diff-filter=D --name-only main..${{ github.ref_name }}
 
 
       - name: Scan for AWS Services
