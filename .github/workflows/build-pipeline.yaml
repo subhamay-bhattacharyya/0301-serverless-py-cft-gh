@@ -22,15 +22,15 @@ jobs:
         run: |
           git fetch origin main --depth=1
           echo "Added files:"
-          git diff --diff-filter=A --name-only origin/main..${{ github.ref_name }}
+          git diff --diff-filter=A --name-only origin/main..${{ github.ref_name }} |tee ${{ github.workspace }}/added-files.txt
           echo ""
 
           echo "Modified files:"
-          git diff --diff-filter=M --name-only origin/main..${{ github.ref_name }}
+          git diff --diff-filter=M --name-only origin/main..${{ github.ref_name }} |tee ${{ github.workspace }}/modified-files.txt
           echo ""
 
           echo "Deleted files:"
-          git diff --diff-filter=D --name-only origin/main..${{ github.ref_name }}
+          git diff --diff-filter=D --name-only origin/main..${{ github.ref_name }} |tee ${{ github.workspace }}/deleted-files.txt
           echo ""
 
       - name: Scan for AWS Services
