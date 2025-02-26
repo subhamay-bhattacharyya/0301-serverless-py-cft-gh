@@ -20,7 +20,7 @@ jobs:
 
       - name: Add safe directory
         run: |
-          git config --global --add safe.directory /github/workspace
+          git fetch origin ${{ github.head_ref }} ${{ github.ref_name}}
 
       - name: Scan for AWS Services
         id: repo-services-scan
