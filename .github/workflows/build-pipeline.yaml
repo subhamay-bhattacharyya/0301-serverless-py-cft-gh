@@ -18,6 +18,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Add safe directory
+        run: |
+          git config --global --add safe.directory /github/workspace
+
       - name: Scan for AWS Services
         id: repo-services-scan
         uses: subhamay-bhattacharyya-gha/repo.service.scanner/.github/actions@main

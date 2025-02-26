@@ -123,7 +123,7 @@ Parameters:
     ConstraintDescription: The Environment must be devl / test or prod
   ###################################### GitHub Attributes #########################################
   GitHubRef:
-    Default: ref_name
+    Default: git_ref_name
     Description: GitHub Ref name to be used as a resource tag value.
     Type: String
     AllowedPattern: ^[a-zA-Z0-9/_-]+$
