@@ -1,0 +1,25 @@
+name: 'Build Pipeline'
+run-name: 'Build CloudFormation Pipeline in ${{ github.ref_name}}'
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'feature**'
+    paths-ignore:
+      - 'README.md'
+      - '**/.github/workflows/build-pipeline.yaml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Scan for AWS Services
+        id: repo-services-scan
+        uses: subhamay-bhattacharyya-gha/repo.service.scanner/.github/actions@main
+        with:
+          github-repo: ${{ github.repository.name }}

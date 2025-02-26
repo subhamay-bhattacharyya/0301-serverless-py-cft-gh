@@ -1,0 +1,8 @@
+.DS_Store
+
+lambda-build.txt
+cfn/params/cfn-parameters.json
+test-event.json
+*.zip
+lambda-code/src/package/*
+lambda-code/src/serverless-lab-01/*

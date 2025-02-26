@@ -1,0 +1,421 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Introduction to Serverless: Root stack template to create
+  VPC/Subnets,Security Group, VPC Endpoint, DynamoDB table."
+
+Metadata:
+  TemplateName: root-stack.yaml
+  TemplateType: VPC / Subnets / S3 Bucket / Lambda Function
+  Version: 1.0.0
+  Owner: Subhamay Bhattacharyya
+  ProjectName:  GenAI-01:Image labels generator using Amazon Rekognition and Lambda
+  Modification History:
+    - 1.0.0 - Feb 26, 2025 -- Initial Version
+  StepsToTest: Manually verify the Stack.
+  StepsToCleanup: Stack delete command
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      ################################## Project Name and Environment ##############################
+      - Label:
+          default: 'Project Name and Environment:'
+        Parameters:
+          - ProjectName
+          - Environment
+      ################################## GitHub Attributes #########################################
+      - Label:
+          default: 'GitHub Attributes:'
+        Parameters:
+          - GitHubRef
+          - GitHubURL
+          - GitHubWFRunNumber
+          - GitHubSHA
+          - GitHubRepository
+          - CiBuild
+      ################################## Code Repository ###########################################
+      - Label:
+          default: 'Code Repository:'
+        Parameters:
+          - CodeRepositoryS3Bucket
+          - LambdaCodeRepositoryS3Bucket
+      ################################## KMS #######################################################
+      - Label:
+          default: "KMS Key:"
+        Parameters:
+          - KmsMasterKeyAlias
+          - KmsMasterKeyArn
+      ################################## DynamoDB Table ############################################
+      - Label:
+          default: "DynamoDB Table:"
+        Parameters:
+          - DynamoDBTableBaseName
+          - PartitionKeyName
+          - PartitionKeyType
+          - PointInTimeRecoveryEnabled
+      ################################## Lambda ####################################################
+      - Label:
+          default: "Lambda Function Configuration:"
+        Parameters:
+        - LambdaFunctionBaseName
+        - LambdaFunctionDescription
+        - LambdaRuntime
+        - LambdaFunctionTimeoutSecs
+        - LambdaFunctionMemory
+    ParameterLabels:
+      ################################## Project Name and Environment ##############################
+      ProjectName:
+        default: "Name of the Project."
+      Environment:
+        default: "Name of the Deployment Environment."
+      ################################## GitHub Attributes #########################################
+      GitHubRef:
+        default: "GitHub Reference Branch or Tag."
+      GitHubURL:
+        default: "URL of the GitHub Repository."
+      GitHubWFRunNumber:
+        default: "GitHub Workflow Execution Run Number."
+      GitHubSHA:
+        default: "GitHub Commit SHA."
+      GitHubRepository:
+        default: "Name of the GitHub Repository."
+      CiBuild:
+        default: "Continuous Integration Build Identifier."
+      ################################## Code Repository Bucket ####################################
+      CodeRepositoryS3Bucket:
+        default: S3 Bucket where the nested stack templates are available.
+      LambdaCodeRepositoryS3Bucket:
+        default: S3 Bucket where the Lambda code with dependencies are available.
+      ################################## KMS #######################################################
+      KmsMasterKeyAlias:
+        default: "KMS Master Key Alias."
+      KmsMasterKeyArn:
+        default: "KMS Master Key Arn."
+      ################################## Lambda ####################################################
+      LambdaFunctionBaseName:
+        default: "Base name of the Lambda function."
+      LambdaFunctionDescription:
+        default: "Description of the Lambda function."
+      LambdaRuntime:
+        default: "Runtime environment for the Lambda function."
+      LambdaFunctionTimeoutSecs:
+        default: "Timeout for the Lambda function in seconds."
+      LambdaFunctionMemory:
+        default: "Memory allocation for the Lambda function."
+
+Parameters:
+  ###################################### Project Name and Environment ##############################
+  ProjectName:
+    Default: serverless-lab-01
+    Description: The Project name to be used as a resource tag value.
+    Type: String
+    MinLength: "5"
+    MaxLength: "30"
+    AllowedPattern: ^[a-z0-9-]+$
+    ConstraintDescription: The length should be between 5 and 30, must contain only
+      lowercase alphabets, numbers, or dashes.
+
+  Environment:
+    Default: devl
+    Description: The Environment name to be used as a resource tag value.
+    Type: String
+    AllowedValues:
+      - devl
+      - test
+      - prod
+    ConstraintDescription: The Environment must be devl / test or prod
+  ###################################### GitHub Attributes #########################################
+  GitHubRef:
+    Default: ref_name
+    Description: GitHub Ref name to be used as a resource tag value.
+    Type: String
+    AllowedPattern: ^[a-zA-Z0-9/_-]+$
+    ConstraintDescription: The GitHub Ref Name can only contain alphanumeric
+      characters, slashes, underscores, and hyphens.
+
+  GitHubURL:
+    Default: https://github.com/owner/repository
+    Description: GitHub URL to be used as a resource tag value.
+    Type: String
+    AllowedPattern: ^https://github.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+/?$
+    ConstraintDescription: The GitHub URL must start with 'https://github.com/' and
+      can only contain alphanumeric characters, dots, underscores, and hyphens.
+
+  GitHubWFRunNumber:
+    Default: "1"
+    Description: The Workflow run number to be used as a resource tag value.
+    Type: Number
+
+  GitHubSHA:
+    Default: d3b07384d113edec49eaa6238ad5ff00f6fb3796
+    Description: The sha value of the last commit to be used as a resource tag value.
+    Type: String
+    AllowedPattern: ^[a-fA-F0-9]{40}$
+    ConstraintDescription: The SHA value must be a 40-character hexadecimal string.
+
+  GitHubRepository:
+    Default: 0001-reponame-py-cft
+    Description: The GitHub Repository name to be used as a resource tag value.
+    Type: String
+    MinLength: "10"
+    MaxLength: "30"
+    AllowedPattern: ^\d{4}-[a-z]+(-[a-z]+)*$
+    ConstraintDescription: The repository length should be between 10 and 30, must
+      contain only lowercase letters, numbers, dashes, dots, and should start
+      with a letter.
+
+  CiBuild:
+    Default: ''
+    Description: Ci Build of the feature branch to be appended to a resource name.
+    Type: String
+  ###################################### Code Repository ###########################################
+  CodeRepositoryS3Bucket:
+    Default: subhamay-aws-cfn-nested-stack-templates-us-east-1
+    Description: S3 Bucket for the nested stack templates.
+    Type: String
+    AllowedPattern: ^[a-z0-9.-]{3,63}$
+    ConstraintDescription: The S3 bucket name must be between 3 and 63 characters
+      long, and can only contain lowercase letters, numbers, dots, and hyphens. ###################################### GitHub Attributes #########################################
+
+  LambdaCodeRepositoryS3Bucket:
+    Default: subhamay-code-repo-637423502513-devl-us-east-1
+    Description: S3 Bucket Name For Lambda Code Repository.
+    Type: String
+    AllowedPattern: ^[a-z0-9.-]{3,63}$
+    ConstraintDescription: The S3 bucket name must be between 3 and 63 characters
+      long, and can only contain lowercase letters, numbers, dots, and hyphens.
+  ###################################### KMS #######################################################
+  KmsMasterKeyAlias:
+    Default: "SB-KMS"
+    Description: "The KMS master key alias to be used for server-side encryption."
+    Type: String
+    MinLength: "5"
+    MaxLength: "20"
+    AllowedPattern: "^[A-Z][A-Z-]+$"
+    ConstraintDescription: "The length of the KMS Key Alias should be beteen 5 and 20 and can only contain lowercase alphanumeric characters and dash."
+
+  KmsMasterKeyArn:
+    Default: "arn:aws:kms:us-east-1:637423502513:key/494509e4-3bc5-44b8-9c4d-12449900d395"
+    Description: "The KMS master key ARN to be used for server-side encryption."
+    Type: String
+    AllowedPattern: "^$|^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-zA-Z0-9-]+$"
+    ConstraintDescription: "The ARN must be a valid KMS key ARN."
+
+  ###################################### DynamoDB Table ############################################
+  DynamoDBTableBaseName:
+    Default: serverless-workshop-intro
+    Description: "The base name for the DynamoDB table. The region and environment will be appended as a suffix by the template."
+    Type: String
+    MinLength: "5"
+    MaxLength: "40"
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9-]*$"
+    ConstraintDescription: "The name must be between 5 and 40 characters long, start with a letter, and may include letters, numbers, or hyphens."
+
+  PartitionKeyName:
+    Type: String
+    Default: "_id"
+    Description: "Name of the partition key attribute."
+    AllowedPattern: "^[a-zA-Z0-9-_]{1,255}$"
+    ConstraintDescription: "The partition key name must be between 1 and 255 characters long, and can only contain alphanumeric characters, hyphens (-), and underscores (_)."
+
+  PartitionKeyType:
+    Type: String
+    Default: "S"
+    AllowedValues: [S, N, B]
+    Description: "Type of the partition key (String, Number, or Binary)."
+    AllowedPattern: "^[S|N|B]$"
+    ConstraintDescription: "The partition key type must be S, N, or B."
+
+  PointInTimeRecoveryEnabled:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: "Whether point-in-time recovery is enabled."
+    ConstraintDescription: "The value must be true or false."
+
+  ##################################### Lambda ####################################################
+  LambdaFunctionBaseName:
+    Default: lambda-function
+    Description: "The base name for the Lambda function. The region and environment will be appended as a suffix by the template."
+    Type: String
+    MinLength: "5"
+    MaxLength: "40"
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9-]*$"
+    ConstraintDescription: "The name must be between 5 and 40 characters long, start with a letter, and may include letters, numbers, or hyphens."
+
+  LambdaFunctionDescription:
+    Default: Lambda function to perform CRUD operation on the DynamoDB table.
+    Description: "A description of the Lambda function."
+    Type: String
+    MaxLength: "200"
+    AllowedPattern: "^$|^[A-Z][a-zA-Z0-9 .,]*$"
+    ConstraintDescription: "The description must be 0?200 characters long, start with an uppercase letter, and may include letters, numbers, spaces, dots, or commas."
+
+  LambdaRuntime:
+    Default: python3.9
+    Description: "Specifies the runtime for the Lambda function."
+    Type: String
+    AllowedValues: [python3.8, python3.9, python3.10, python3.11, python3.12, nodejs18.x]
+    ConstraintDescription: "The runtime must be Python 3.8 or higher, or Node.js 18.x or higher."
+
+  LambdaFunctionTimeoutSecs:
+    Default: "300"
+    Description: "The timeout period for the Lambda function in seconds."
+    Type: Number
+    MinValue: "3"
+    MaxValue: "900"
+    ConstraintDescription: "The timeout must be between 3 and 900 seconds."
+
+  LambdaFunctionMemory:
+    Default: "256"
+    Description: "The amount of memory allocated to the Lambda function in MB."
+    Type: Number
+    MinValue: "128"
+    MaxValue: "10240"
+    ConstraintDescription: "The memory allocation must be between 128 and 10,240 MB."
+
+Resources:
+
+  ###################################### DynamoDB Table ############################################
+  DynamoDBTable:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/database/dynamodb-table.yaml"
+      Parameters:
+        TableBaseName: !Ref DynamoDBTableBaseName
+        PartitionKeyName: !Ref PartitionKeyName
+        PartitionKeyType: !Ref PartitionKeyType
+        PointInTimeRecoveryEnabled: !Ref PointInTimeRecoveryEnabled
+        KmsMasterKeyAlias: !Ref KmsMasterKeyAlias
+        BillingMode: "PROVISIONED"
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+        TableClass: "STANDARD_INFREQUENT_ACCESS"
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        GitHubRef: !Ref GitHubRef
+        GitHubURL: !Ref GitHubURL
+        GitHubWFRunNumber: !Ref GitHubWFRunNumber
+        GitHubSHA: !Ref GitHubSHA
+        GitHubRepository: !Ref GitHubRepository
+        CiBuild: !Ref CiBuild
+      TimeoutInMinutes: 15
+
+  ###################################### Lambda IAM Role ###########################################
+  LambdaRole:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/iam/iam-role.yaml"
+      Parameters:
+        ServiceName: "lambda"
+        RolePath: "/"
+        RoleBaseName: "lambda-role"
+        RoleDescription: "IAM role used by Serverless Patterns Lab-01 lambda."
+        DynamoDBTablePolicy: "read-write"
+        DynamoDBTableArn: !GetAtt DynamoDBTable.Outputs.TableArn
+        LambdaFunctionBaseName: !Ref LambdaFunctionBaseName
+        KmsMasterKeyArn: !Ref KmsMasterKeyArn
+        LambdaTracingMode: "Active"
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        GitHubRef: !Ref GitHubRef
+        GitHubURL: !Ref GitHubURL
+        GitHubWFRunNumber: !Ref GitHubWFRunNumber
+        GitHubSHA: !Ref GitHubSHA
+        GitHubRepository: !Ref GitHubRepository
+        CiBuild: !Ref CiBuild
+      TimeoutInMinutes: 15
+  
+  ###################################### CloudWatch Log Group ######################################
+  LambdaLogGroup:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/cloudwatch/log-group.yaml"
+      Parameters:
+        LogGroupServiceName: "lambda"
+        LogGroupBaseName: !Ref LambdaFunctionBaseName
+        LogRetentionInDays: "5"
+        KmsMasterKeyArn: !Ref KmsMasterKeyArn
+        LogGroupClass: "INFREQUENT_ACCESS"
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        GitHubRef: !Ref GitHubRef
+        GitHubURL: !Ref GitHubURL
+        GitHubWFRunNumber: !Ref GitHubWFRunNumber
+        GitHubSHA: !Ref GitHubSHA
+        GitHubRepository: !Ref GitHubRepository
+        CiBuild: !Ref CiBuild
+      TimeoutInMinutes: 15
+  ##################################### Lambda Function ###########################################
+  LambdaFunction:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/lambda/lambda-function.yaml"
+      Parameters:
+        CodeRepositoryS3Bucket: !Ref LambdaCodeRepositoryS3Bucket
+        LambdaFunctionBaseName: !Ref LambdaFunctionBaseName
+        LambdaFunctionDescription: !Ref LambdaFunctionDescription
+        LambdaHandler: "lambda_function.lambda_handler"
+        LambdaRuntime: !Ref LambdaRuntime
+        LambdaExecutionRoleArn: !GetAtt LambdaRole.Outputs.RoleArn
+        LambdaFunctionTimeoutSecs: !Ref LambdaFunctionTimeoutSecs
+        LambdaFunctionMemory: !Ref LambdaFunctionMemory
+        # SubnetIds: !Join [",", [!GetAtt PrivateSubnetAZ1.Outputs.SubnetId , !GetAtt PrivateSubnetAZ2.Outputs.SubnetId]]
+        # SecurityGroupIds: !Join [",", [!GetAtt VpcEndpointSecurityGroup.Outputs.SecurityGroupId]]
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        GitHubRef: !Ref GitHubRef
+        GitHubURL: !Ref GitHubURL
+        GitHubWFRunNumber: !Ref GitHubWFRunNumber
+        GitHubSHA: !Ref GitHubSHA
+        GitHubRepository: !Ref GitHubRepository
+        CiBuild: !Ref CiBuild
+      TimeoutInMinutes: 15
+      
+  ###################################### SSM Parameter - DynamoDB Table ############################
+  SSMParameterDynamoDBTable:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/systems-manager/ssm-param.yaml"
+      Parameters:
+        SSMParameterName: !Sub "/${ProjectName}/${Environment}/dynamodb-table-name"
+        SSMParameterDescription: "DynamoDB table name for storing the city and timestamps."
+        SSMParameterValue: !Sub "${ProjectName}-${DynamoDBTableBaseName}-${Environment}-${AWS::Region}${CiBuild}"
+        SSMParameterType: "String"
+        SSMTier: "Standard"
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        GitHubRef: !Ref GitHubRef
+        GitHubURL: !Ref GitHubURL
+        GitHubWFRunNumber: !Ref GitHubWFRunNumber
+        GitHubSHA: !Ref GitHubSHA
+        GitHubRepository: !Ref GitHubRepository
+        CiBuild: !Ref CiBuild
+      TimeoutInMinutes: 15
+Outputs:
+  
+  ###################################### S3 Bucket #################################################
+  DynamoDBTableArn:
+    Description: DynamoDB Table Arn
+    Value: !GetAtt DynamoDBTable.Outputs.TableArn
+  ###################################### Lambda IAM Role ###########################################
+  LambdaExecutionRoleName:
+    Description: Lambda Execution Role Name
+    Value: !GetAtt LambdaRole.Outputs.RoleName
+  LambdaExecutionRoleArn:
+    Description: Lambda Execution Role Arn
+    Value: !GetAtt LambdaRole.Outputs.RoleArn
+  LambdaExecutionRoleId:
+    Description: Lambda Execution Role Id
+    Value: !GetAtt LambdaRole.Outputs.RoleId
+  ##################################### Lambda Function ###########################################
+  LambdaFunctionArn:
+    Description: Lambda Function Arn
+    Value: !GetAtt LambdaFunction.Outputs.LambdaFunctionArn
