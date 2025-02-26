@@ -47,7 +47,7 @@ def lambda_handler(event, context):
                 "\n", ", "
             ),  # Replace newline characters for CSV formatting
             "Email": fake.email(),
-            "Phone#": fake.phone_number(),
+            "Phone": fake.phone_number(),
         }
         users.append(user)
 
