@@ -7,3 +7,4 @@ test-event.json
 lambda-code/src/package/*
 lambda-code/src/serverless-lab-01/*
 *-files.txt
+test.py

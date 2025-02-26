@@ -52,4 +52,4 @@ def lambda_handler(event, context):
         users.append(user)
 
     # Return the response
-    return {"statusCode": 200, "users": users}
+    return {"statusCode": 200, "message": "Success", "users": users}

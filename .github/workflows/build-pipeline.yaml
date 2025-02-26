@@ -19,7 +19,7 @@ jobs:
       aws-cloudformation: ${{ steps.repo-services-scan.outputs.aws-cloudformation }}
       aws-lambda: ${{ steps.repo-services-scan.outputs.aws-lambda }}
       aws-glue: ${{ steps.repo-services-scan.outputs.aws-glue }}
-      aws-stepfunctions: ${{ steps.repo-services-scan.outputs.aws-stepfunctions }}
+      aws-stepfunction: ${{ steps.repo-services-scan.outputs.aws-stepfunction }}
       aws-ecs: ${{ steps.repo-services-scan.outputs.aws-ecs }}
     steps:
       - name: Checkout Repository
@@ -46,16 +46,92 @@ jobs:
         with:
           github-repo: ${{ github.repository.name }}
 
+  validate-cloudformation:
+    name: 'Validate and Scan CloudFormation'
+    runs-on: ubuntu-latest
+    needs: scan-repo-services
+    if: ${{ needs.scan-repo-services.outputs.aws-cloudformation == 'true' }}
+    steps:
+      - name: Validate CloudFormation
+        run: |
+          echo "Running Checkov Scan"
+          echo ${{ needs.scan-repo-services.outputs.aws-cloudformation }}
 
+  run-checkov-scan:
+    name: 'Run Checkov Scan'
+    runs-on: ubuntu-latest
+    needs: validate-cloudformation
+    steps:
+      - name: Run Checkov Scan
+        run: |
+          echo "Running Checkov Scan"
+
+  run-cf-lint:
+    name: 'Run CF-Lint'
+    runs-on: ubuntu-latest
+    needs: run-checkov-scan
+    steps:
+      - name: Run Checkov Scan
+        run: |
+          echo "Running Checkov Scan"
+        
   build-lambda-package:
     name: 'Build Lambda Package'
     runs-on: ubuntu-latest
     needs: scan-repo-services
-    # if: ${{ needs.scan-repo-services.outputs.aws-lambda == 'true' }}
+    if: ${{ needs.scan-repo-services.outputs.aws-lambda == 'true' }}
     steps:
       - name: Build Lambda Package
         run: |
           echo "Building Lambda Package"
           echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
+
+  build-state-machine:
+    name: 'Build State Machine'
+    runs-on: ubuntu-latest
+    needs: scan-repo-services
+    if: ${{ needs.scan-repo-services.outputs.aws-stepfunction == 'true' }}
+    steps:
+      - name: Build State Machine
+        run: |
+          echo "Building State Machine"
+          echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
+
+  build-glue-code:
+    name: 'Build Glue Code'
+    runs-on: ubuntu-latest
+    needs: scan-repo-services
+    if: ${{ needs.scan-repo-services.outputs.aws-glue == 'true' }}
+    steps:
+      - name: Build Glue Code
+        run: |
+          echo "Building State Machine"
+          echo ${{ needs.scan-repo-services.outputs.aws-glue }}
+
+  build-ecs-container:
+    name: 'Build ECS Container'
+    runs-on: ubuntu-latest
+    needs: scan-repo-services
+    # if: ${{ needs.scan-repo-services.outputs.aws-ecs == 'true' }}
+    steps:
+      - name: Build Glue Code
+        run: |
+          echo "Building State Machine"
+          echo ${{ needs.scan-repo-services.outputs.aws-ecs }}
+
+  run-infra-cost:
+    name: 'Run Infrastructure Cost'
+    runs-on: ubuntu-latest
+    needs: 
+      - run-checkov-scan
+      - build-lambda-package
+      - build-state-machine
+      - build-glue-code
+      - build-ecs-container
+    steps:
+      - name: Run Infrastructure Cost
+        run: |
+          echo "Running Infrastructure Cost"
+
 
       
