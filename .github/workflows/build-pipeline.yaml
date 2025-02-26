@@ -52,20 +52,34 @@ jobs:
     needs: scan-repo-services
     if: ${{ needs.scan-repo-services.outputs.aws-cloudformation == 'true' }}
     steps:
+      - name: Validate and Scan CloudFormation
+        id: validate-scan-cf-template
+        if: always()
+        run: |
+          echo "Validate and Scan CloudFormation"
+
+
       - name: Validate CloudFormation
+        id: validate-cf-template
         run: |
           echo "Validate CloudFormation Template"
           echo ${{ needs.scan-repo-services.outputs.aws-cloudformation }}
 
       - name: Run Checkov Scan
+        if: success()
+        id: checkov
         run: |
           echo "Running Checkov Scan"
         
       - name: Run CF-Lint
+        id: cflint
+        if: success()
         run: |
           echo "Running CF-Lint"
 
       - name: Run Infrastructure Cost
+        id: infra-cost
+        if: success()
         run: |
           echo "Running Infrastructure Cost"
 
@@ -73,24 +87,38 @@ jobs:
     name: 'Package'
     runs-on: ubuntu-latest
     needs: scan-repo-services
-    if: ${{ needs.scan-repo-services.outputs.aws-lambda == 'true' }}
     steps:
+      - name: Build Lambda, Glue, Step Function, ECS Container
+        id: build
+        if: always()
+        run: |
+          echo "Building Lambda, Glue, Step Function, ECS Container"
+          echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
+
       - name: Build Lambda Package
+        id: build-lambda
+        if: ${{ needs.scan-repo-services.outputs.aws-lambda == 'true' }}
         run: |
           echo "Building Lambda Package"
           echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
 
       - name: Build State Machine
+        id: build-stepfunction
+        if: ${{ needs.scan-repo-services.outputs.aws-stepfunction == 'true' }}
         run: |
           echo "Building State Machine"
           echo ${{ needs.scan-repo-services.outputs.aws-lambda }}
 
       - name: Build Glue Code
+        id: build-glue
+        if: ${{ needs.scan-repo-services.outputs.aws-glue == 'true' }}
         run: |
           echo "Building State Machine"
           echo ${{ needs.scan-repo-services.outputs.aws-glue }}
 
       - name: Build ECS Container
+        id: build-ecs
+        if: ${{ needs.scan-repo-services.outputs.aws-ecs == 'true' }}
         run: |
           echo "Building ECS Container"
           echo ${{ needs.scan-repo-services.outputs.aws-ecs }}
